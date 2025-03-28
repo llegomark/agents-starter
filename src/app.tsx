@@ -12,6 +12,7 @@ import { Input } from "@/components/input/Input";
 import { Avatar } from "@/components/avatar/Avatar";
 import { Toggle } from "@/components/toggle/Toggle";
 import { Tooltip } from "@/components/tooltip/Tooltip";
+import { MemoizedMarkdown } from "./components/markdown/MemoizedMarkdown";
 
 // Icon imports
 import {
@@ -79,6 +80,8 @@ export default function Chat() {
   } = useAgentChat({
     agent,
     maxSteps: 5,
+    // Throttle the messages and data updates to 50ms for better performance
+    experimental_throttle: 50,
   });
 
   // Scroll to bottom when messages change
@@ -203,9 +206,8 @@ export default function Chat() {
                   className={`flex ${isUser ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`flex gap-2 max-w-[85%] ${
-                      isUser ? "flex-row-reverse" : "flex-row"
-                    }`}
+                    className={`flex gap-2 max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"
+                      }`}
                   >
                     {showAvatar && !isUser ? (
                       <Avatar username={"AI"} />
@@ -218,37 +220,34 @@ export default function Chat() {
                         {m.parts?.map((part, i) => {
                           if (part.type === "text") {
                             return (
-                              // biome-ignore lint/suspicious/noArrayIndexKey: it's fine here
                               <div key={i}>
                                 <Card
-                                  className={`p-3 rounded-md bg-neutral-100 dark:bg-neutral-900 ${
-                                    isUser
+                                  className={`p-3 rounded-md bg-neutral-100 dark:bg-neutral-900 ${isUser
                                       ? "rounded-br-none"
                                       : "rounded-bl-none border-assistant-border"
-                                  } ${
-                                    part.text.startsWith("scheduled message")
+                                    } ${part.text.startsWith("scheduled message")
                                       ? "border-accent/50"
                                       : ""
-                                  } relative`}
+                                    } relative`}
                                 >
                                   {part.text.startsWith(
                                     "scheduled message"
                                   ) && (
-                                    <span className="absolute -top-3 -left-2 text-base">
-                                      🕒
-                                    </span>
-                                  )}
-                                  <p className="text-sm whitespace-pre-wrap">
-                                    {part.text.replace(
-                                      /^scheduled message: /,
-                                      ""
+                                      <span className="absolute -top-3 -left-2 text-base">
+                                        🕒
+                                      </span>
                                     )}
-                                  </p>
+                                  {/* Using MemoizedMarkdown component here instead of basic text */}
+                                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none overflow-hidden">
+                                    <MemoizedMarkdown
+                                      id={m.id}
+                                      content={part.text.replace(/^scheduled message: /, "")}
+                                    />
+                                  </div>
                                 </Card>
                                 <p
-                                  className={`text-xs text-muted-foreground mt-1 ${
-                                    isUser ? "text-right" : "text-left"
-                                  }`}
+                                  className={`text-xs text-muted-foreground mt-1 ${isUser ? "text-right" : "text-left"
+                                    }`}
                                 >
                                   {formatTime(
                                     new Date(m.createdAt as unknown as string)
@@ -270,7 +269,6 @@ export default function Chat() {
                             ) {
                               return (
                                 <Card
-                                  // biome-ignore lint/suspicious/noArrayIndexKey: it's fine here
                                   key={i}
                                   className="p-4 my-3 rounded-md bg-neutral-100 dark:bg-neutral-900"
                                 >

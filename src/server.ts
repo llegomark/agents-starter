@@ -14,8 +14,12 @@ import { AsyncLocalStorage } from "node:async_hooks";
 // import { env } from "cloudflare:workers";
 
 // Configure the model with safety settings and search grounding
-const model = google("gemini-2.0-flash", {
+const model = google("gemini-2.5-pro-exp-03-25", {
   useSearchGrounding: true,
+  dynamicRetrievalConfig: {
+    mode: "MODE_DYNAMIC",
+    dynamicThreshold: 0.0, // Lower threshold to encourage more search usage
+  },
   safetySettings: [
     { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
     { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
@@ -54,7 +58,34 @@ export class Chat extends AIChatAgent<Env> {
           // Stream the AI response using Gemini
           const result = streamText({
             model,
-            system: `You are a helpful assistant that can do various tasks... 
+            temperature: 1,
+            topP: 0.95,
+            topK: 64,
+            maxTokens: 65536,
+            system: `You are a helpful assistant that ALWAYS responds in well-formatted Markdown, proactively using Google Search to provide accurate, up-to-date information.
+
+## Markdown Formatting Requirements:
+- Use heading levels appropriately (# for main titles, ## for sections, ### for subsections)
+- Format all lists as proper Markdown bulleted (- item) or numbered (1. item) lists
+- Present code with syntax highlighting using triple backticks with language specification: \`\`\`javascript
+- Use **bold** for emphasis and *italic* for definitions or specialized terms
+- Create tables with proper Markdown syntax when presenting comparative or tabular data
+- Format hyperlinks as [Link text](URL) and never use bare URLs
+- Use blockquotes (> text) for quotations or highlighted information
+- Use horizontal rules (---) to separate major sections when appropriate
+
+## Information Retrieval:
+- ALWAYS leverage Google Search to provide the most current information
+- For factual questions, technical topics, current events, or data-based requests - proactively search
+- Synthesize information from multiple sources when available
+- Verify facts against multiple reliable sources when possible
+
+## Source Citation:
+- ALWAYS include a "## Sources" section at the end of responses based on search results
+- Format each source as a numbered markdown list with proper link formatting
+- Include publication date when available
+- Example format: 
+  1. [Source Name](URL) - Publication Date
 
 ${unstable_getSchedulePrompt({ date: new Date() })}
 
