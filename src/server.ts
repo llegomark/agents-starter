@@ -1,7 +1,5 @@
 import { routeAgentRequest, type Schedule } from "agents";
-
 import { unstable_getSchedulePrompt } from "agents/schedule";
-
 import { AIChatAgent } from "agents/ai-chat-agent";
 import {
   createDataStreamResponse,
@@ -9,23 +7,26 @@ import {
   streamText,
   type StreamTextOnFinishCallback,
 } from "ai";
-import { google } from "@ai-sdk/google";
+import { google, type GoogleGenerativeAIProviderMetadata } from "@ai-sdk/google";
 import { processToolCalls } from "./utils";
 import { tools, executions } from "./tools";
 import { AsyncLocalStorage } from "node:async_hooks";
 // import { env } from "cloudflare:workers";
 
+// Configure the model with safety settings and search grounding
 const model = google("gemini-2.0-flash", {
-  useSearchGrounding: true
+  useSearchGrounding: true,
+  safetySettings: [
+    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+  ]
 });
-// Cloudflare AI Gateway
-// const openai = createOpenAI({
-//   apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
-//   baseURL: env.GATEWAY_BASE_URL,
-// });
 
 // we use ALS to expose the agent context to the tools
 export const agentContext = new AsyncLocalStorage<Chat>();
+
 /**
  * Chat Agent implementation that handles real-time AI chat interactions
  */
@@ -50,7 +51,7 @@ export class Chat extends AIChatAgent<Env> {
             executions,
           });
 
-          // Stream the AI response using GPT-4
+          // Stream the AI response using Gemini
           const result = streamText({
             model,
             system: `You are a helpful assistant that can do various tasks... 
@@ -58,10 +59,46 @@ export class Chat extends AIChatAgent<Env> {
 ${unstable_getSchedulePrompt({ date: new Date() })}
 
 If the user asks to schedule a task, use the schedule tool to schedule the task.
+
+If your response is based on search results, please include the sources at the end of your response.
 `,
             messages: processedMessages,
             tools,
-            onFinish,
+            onFinish: (finishResult) => {
+              // Extract sources from providerMetadata if available
+              if (finishResult.providerMetadata?.google) {
+                // Use the approach from the documentation - cast properly with unknown intermediate step
+                const metadata = finishResult.providerMetadata?.google as unknown as
+                  GoogleGenerativeAIProviderMetadata | undefined;
+
+                // Safely access properties using optional chaining
+                const groundingMetadata = metadata?.groundingMetadata;
+                const safetyRatings = metadata?.safetyRatings;
+
+                if (groundingMetadata) {
+                  console.log("Grounding metadata found:", groundingMetadata);
+
+                  // Log search queries if they exist
+                  if (groundingMetadata.webSearchQueries) {
+                    console.log("Search queries used:", groundingMetadata.webSearchQueries);
+                  }
+
+                  // If there are sources in the result
+                  if (finishResult.sources && finishResult.sources.length > 0) {
+                    console.log("Sources found:", finishResult.sources);
+                    // Optionally, you could send this information back to the client
+                    // dataStream.append({ sources: finishResult.sources });
+                  }
+                }
+
+                if (safetyRatings) {
+                  console.log("Safety ratings:", safetyRatings);
+                }
+              }
+
+              // Call the original onFinish callback with the correct typing
+              onFinish(finishResult as any); // Using 'any' to bypass the type mismatch for now
+            },
             onError: (error) => {
               console.error("Error while streaming:", error);
             },
@@ -76,6 +113,7 @@ If the user asks to schedule a task, use the schedule tool to schedule the task.
       return dataStreamResponse;
     });
   }
+
   async executeTask(description: string, task: Schedule<string>) {
     await this.saveMessages([
       ...this.messages,
