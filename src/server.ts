@@ -1,3 +1,4 @@
+// src/server.ts
 import { routeAgentRequest, type Schedule } from "agents";
 import { unstable_getSchedulePrompt } from "agents/schedule";
 import { AIChatAgent } from "agents/ai-chat-agent";
@@ -6,26 +7,33 @@ import {
   generateId,
   streamText,
   type StreamTextOnFinishCallback,
+  type DataStreamWriter, // Import DataStreamWriter
 } from "ai";
-import { google, type GoogleGenerativeAIProviderMetadata } from "@ai-sdk/google";
+import {
+  google,
+  type GoogleGenerativeAIProviderMetadata,
+} from "@ai-sdk/google";
 import { processToolCalls } from "./utils";
 import { tools, executions } from "./tools";
 import { AsyncLocalStorage } from "node:async_hooks";
 // import { env } from "cloudflare:workers";
 
 // Configure the model with safety settings and search grounding
-const model = google("gemini-2.5-pro-exp-03-25", {
+const model = google("gemini-2.5-pro-exp-03-25", { // Model name kept as requested
   useSearchGrounding: true,
   dynamicRetrievalConfig: {
     mode: "MODE_DYNAMIC",
     dynamicThreshold: 0.0, // Lower threshold to encourage more search usage
   },
   safetySettings: [
-    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-  ]
+    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+    {
+      category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      threshold: "BLOCK_NONE",
+    },
+  ],
 });
 
 // we use ALS to expose the agent context to the tools
@@ -45,7 +53,7 @@ export class Chat extends AIChatAgent<Env> {
     // Create a streaming response that handles both text and tool outputs
     return agentContext.run(this, async () => {
       const dataStreamResponse = createDataStreamResponse({
-        execute: async (dataStream) => {
+        execute: async (dataStream: DataStreamWriter) => { // Added type annotation
           // Process any pending tool calls from previous messages
           // This handles human-in-the-loop confirmations for tools
           const processedMessages = await processToolCalls({
@@ -84,7 +92,7 @@ export class Chat extends AIChatAgent<Env> {
 - ALWAYS include a "## Sources" section at the end of responses based on search results
 - Format each source as a numbered markdown list with proper link formatting
 - Include publication date when available
-- Example format: 
+- Example format:
   1. [Source Name](URL) - Publication Date
 
 ${unstable_getSchedulePrompt({ date: new Date() })}
@@ -96,39 +104,47 @@ If your response is based on search results, please include the sources at the e
             messages: processedMessages,
             tools,
             onFinish: (finishResult) => {
-              // Extract sources from providerMetadata if available
-              if (finishResult.providerMetadata?.google) {
-                // Use the approach from the documentation - cast properly with unknown intermediate step
-                const metadata = finishResult.providerMetadata?.google as unknown as
-                  GoogleGenerativeAIProviderMetadata | undefined;
+              // --- START: Source Annotation ---
+              // Check if sources exist in the final result
+              if (finishResult.sources && finishResult.sources.length > 0) {
+                console.log("Sources found, sending as annotation:", finishResult.sources);
+                // Send the sources as a message annotation. This associates
+                // the sources with the specific message being finished.
+                dataStream.writeMessageAnnotation({
+                  // Use a specific key, e.g., 'googleSources'
+                  googleSources: finishResult.sources,
+                });
+              } else {
+                console.log("No sources found in finishResult.");
+              }
+              // --- END: Source Annotation ---
 
-                // Safely access properties using optional chaining
+              // --- Optional: Log other metadata (kept as before) ---
+              if (finishResult.providerMetadata?.google) {
+                const metadata =
+                  finishResult.providerMetadata
+                    ?.google as unknown as
+                  | GoogleGenerativeAIProviderMetadata
+                  | undefined;
                 const groundingMetadata = metadata?.groundingMetadata;
                 const safetyRatings = metadata?.safetyRatings;
-
                 if (groundingMetadata) {
                   console.log("Grounding metadata found:", groundingMetadata);
-
-                  // Log search queries if they exist
                   if (groundingMetadata.webSearchQueries) {
-                    console.log("Search queries used:", groundingMetadata.webSearchQueries);
-                  }
-
-                  // If there are sources in the result
-                  if (finishResult.sources && finishResult.sources.length > 0) {
-                    console.log("Sources found:", finishResult.sources);
-                    // Optionally, you could send this information back to the client
-                    // dataStream.append({ sources: finishResult.sources });
+                    console.log(
+                      "Search queries used:",
+                      groundingMetadata.webSearchQueries
+                    );
                   }
                 }
-
                 if (safetyRatings) {
                   console.log("Safety ratings:", safetyRatings);
                 }
               }
+              // --- End Optional Logging ---
 
-              // Call the original onFinish callback with the correct typing
-              onFinish(finishResult as any); // Using 'any' to bypass the type mismatch for now
+              // Call the original onFinish callback
+              onFinish(finishResult as any);
             },
             onError: (error) => {
               console.error("Error while streaming:", error);
@@ -167,7 +183,9 @@ export default {
       console.error(
         "GOOGLE_GENERATIVE_AI_API_KEY is not set, don't forget to set it locally in .dev.vars, and use `wrangler secret bulk .dev.vars` to upload it to production"
       );
-      return new Response("GOOGLE_GENERATIVE_AI_API_KEY is not set", { status: 500 });
+      return new Response("GOOGLE_GENERATIVE_AI_API_KEY is not set", {
+        status: 500,
+      });
     }
     return (
       // Route the request to our agent or return 404 if not found

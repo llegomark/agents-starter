@@ -1,3 +1,4 @@
+// src/app.tsx
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAgent } from "agents/react";
 import { useAgentChat } from "agents/ai-react";
@@ -17,6 +18,7 @@ import { MemoizedMarkdown } from "./components/markdown/MemoizedMarkdown";
 // Icon imports
 import {
   Bug,
+  LinkSimple,
   Moon,
   PaperPlaneRight,
   Robot,
@@ -29,9 +31,17 @@ const toolsRequiringConfirmation: (keyof typeof tools)[] = [
   "getWeatherInformation",
 ];
 
+// Define a type for the source structure we expect in annotations
+type GoogleSource = {
+  sourceType: 'url';
+  id: string;
+  url: string;
+  title?: string;
+  providerMetadata?: any;
+};
+
 export default function Chat() {
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    // Check localStorage first, default to dark if not found
     const savedTheme = localStorage.getItem("theme");
     return (savedTheme as "dark" | "light") || "dark";
   });
@@ -43,7 +53,6 @@ export default function Chat() {
   }, []);
 
   useEffect(() => {
-    // Apply theme class on mount and when theme changes
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
       document.documentElement.classList.remove("light");
@@ -51,12 +60,9 @@ export default function Chat() {
       document.documentElement.classList.remove("dark");
       document.documentElement.classList.add("light");
     }
-
-    // Save theme preference to localStorage
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  // Scroll to bottom on mount
   useEffect(() => {
     scrollToBottom();
   }, [scrollToBottom]);
@@ -80,11 +86,9 @@ export default function Chat() {
   } = useAgentChat({
     agent,
     maxSteps: 5,
-    // Throttle the messages and data updates to 50ms for better performance
     experimental_throttle: 50,
   });
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     agentMessages.length > 0 && scrollToBottom();
   }, [agentMessages, scrollToBottom]);
@@ -101,12 +105,16 @@ export default function Chat() {
   );
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   return (
     <div className="h-[100vh] w-full p-4 flex justify-center items-center bg-fixed overflow-hidden">
       <div className="h-[calc(100vh-2rem)] w-full mx-auto max-w-lg flex flex-col shadow-xl rounded-md overflow-hidden relative border border-neutral-300 dark:border-neutral-800">
+        {/* Header remains the same */}
         <div className="px-4 py-3 border-b border-neutral-300 dark:border-neutral-800 flex items-center gap-3 sticky top-0 z-10">
           <div className="flex items-center justify-center h-8 w-8">
             <svg
@@ -125,11 +133,9 @@ export default function Chat() {
               <use href="#ai:local:agents" />
             </svg>
           </div>
-
           <div className="flex-1">
             <h2 className="font-semibold text-base">AI Chat Agent</h2>
           </div>
-
           <div className="flex items-center gap-2 mr-2">
             <Bug size={16} />
             <Toggle
@@ -138,7 +144,6 @@ export default function Chat() {
               onClick={() => setShowDebug((prev) => !prev)}
             />
           </div>
-
           <Button
             variant="ghost"
             size="md"
@@ -148,7 +153,6 @@ export default function Chat() {
           >
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </Button>
-
           <Button
             variant="ghost"
             size="md"
@@ -163,6 +167,7 @@ export default function Chat() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 max-h-[calc(100vh-10rem)]">
           {agentMessages.length === 0 && (
+            // Welcome message remains the same
             <div className="h-full flex items-center justify-center">
               <Card className="p-6 max-w-md mx-auto bg-neutral-100 dark:bg-neutral-900">
                 <div className="text-center space-y-4">
@@ -183,6 +188,10 @@ export default function Chat() {
                       <span className="text-[#F48120]">•</span>
                       <span>Local time in different locations</span>
                     </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-[#F48120]">•</span>
+                      <span>Up-to-date info using Google Search</span>
+                    </li>
                   </ul>
                 </div>
               </Card>
@@ -193,7 +202,16 @@ export default function Chat() {
             const isUser = m.role === "user";
             const showAvatar =
               index === 0 || agentMessages[index - 1]?.role !== m.role;
-            const showRole = showAvatar && !isUser;
+
+            // <<< Start: Annotation Source Extraction >>>
+            // Messages have an `annotations` property which is an array.
+            // We look through this array for an object that contains our `googleSources` key.
+            const sourcesAnnotation = m.annotations?.find(
+              (anno) => anno && typeof anno === 'object' && 'googleSources' in anno
+            );
+            const sources: GoogleSource[] | undefined = sourcesAnnotation ? (sourcesAnnotation as any).googleSources : undefined;
+            // <<< End: Annotation Source Extraction >>>
+
 
             return (
               <div key={m.id}>
@@ -203,7 +221,8 @@ export default function Chat() {
                   </pre>
                 )}
                 <div
-                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                  className={`flex ${isUser ? "justify-end" : "justify-start"
+                    }`}
                 >
                   <div
                     className={`flex gap-2 max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"
@@ -212,24 +231,28 @@ export default function Chat() {
                     {showAvatar && !isUser ? (
                       <Avatar username={"AI"} />
                     ) : (
-                      !isUser && <div className="w-8" />
+                      !isUser && <div className="w-8" /> // Alignment placeholder
                     )}
 
-                    <div>
-                      <div>
-                        {m.parts?.map((part, i) => {
-                          if (part.type === "text") {
-                            return (
-                              <div key={i}>
-                                <Card
-                                  className={`p-3 rounded-md bg-neutral-100 dark:bg-neutral-900 ${isUser
-                                      ? "rounded-br-none"
-                                      : "rounded-bl-none border-assistant-border"
-                                    } ${part.text.startsWith("scheduled message")
-                                      ? "border-accent/50"
-                                      : ""
-                                    } relative`}
-                                >
+                    {/* Content and Timestamp Container */}
+                    <div className="flex flex-col">
+                      {/* Main Content Bubble */}
+                      {/* Render only non-source parts here */}
+                      {m.parts && m.parts.length > 0 && (
+                        <Card
+                          className={`p-3 rounded-md bg-neutral-100 dark:bg-neutral-900 ${isUser
+                            ? "rounded-br-none"
+                            : "rounded-bl-none border-assistant-border"
+                            } relative`}
+                        >
+                          {m.parts.map((part, i) => {
+                            // Only render non-source parts in the main bubble
+                            if (part.type === "source") return null;
+
+                            if (part.type === "text") {
+                              return (
+                                // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                                <div key={i}>
                                   {part.text.startsWith(
                                     "scheduled message"
                                   ) && (
@@ -237,102 +260,134 @@ export default function Chat() {
                                         🕒
                                       </span>
                                     )}
-                                  {/* Using MemoizedMarkdown component here instead of basic text */}
                                   <div className="text-sm prose prose-sm dark:prose-invert max-w-none overflow-hidden">
                                     <MemoizedMarkdown
                                       id={m.id}
-                                      content={part.text.replace(/^scheduled message: /, "")}
+                                      content={part.text.replace(
+                                        /^scheduled message: /,
+                                        ""
+                                      )}
                                     />
                                   </div>
-                                </Card>
-                                <p
-                                  className={`text-xs text-muted-foreground mt-1 ${isUser ? "text-right" : "text-left"
-                                    }`}
-                                >
-                                  {formatTime(
-                                    new Date(m.createdAt as unknown as string)
-                                  )}
-                                </p>
-                              </div>
-                            );
-                          }
+                                </div>
+                              );
+                            }
 
-                          if (part.type === "tool-invocation") {
-                            const toolInvocation = part.toolInvocation;
-                            const toolCallId = toolInvocation.toolCallId;
+                            if (part.type === "tool-invocation") {
+                              // Tool invocation rendering logic remains the same
+                              const toolInvocation = part.toolInvocation;
+                              const toolCallId = toolInvocation.toolCallId;
 
-                            if (
-                              toolsRequiringConfirmation.includes(
-                                toolInvocation.toolName as keyof typeof tools
-                              ) &&
-                              toolInvocation.state === "call"
-                            ) {
-                              return (
-                                <Card
-                                  key={i}
-                                  className="p-4 my-3 rounded-md bg-neutral-100 dark:bg-neutral-900"
-                                >
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <div className="bg-[#F48120]/10 p-1.5 rounded-full">
-                                      <Robot
-                                        size={16}
-                                        className="text-[#F48120]"
-                                      />
+                              if (
+                                toolsRequiringConfirmation.includes(
+                                  toolInvocation.toolName as keyof typeof tools
+                                ) &&
+                                toolInvocation.state === "call"
+                              ) {
+                                return (
+                                  <Card
+                                    // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                                    key={i}
+                                    className="p-4 my-3 rounded-md bg-neutral-100 dark:bg-neutral-900"
+                                  >
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <div className="bg-[#F48120]/10 p-1.5 rounded-full">
+                                        <Robot
+                                          size={16}
+                                          className="text-[#F48120]"
+                                        />
+                                      </div>
+                                      <h4 className="font-medium">
+                                        {toolInvocation.toolName}
+                                      </h4>
                                     </div>
-                                    <h4 className="font-medium">
-                                      {toolInvocation.toolName}
-                                    </h4>
-                                  </div>
 
-                                  <div className="mb-3">
-                                    <h5 className="text-xs font-medium mb-1 text-muted-foreground">
-                                      Arguments:
-                                    </h5>
-                                    <pre className="bg-background/80 p-2 rounded-md text-xs overflow-auto">
-                                      {JSON.stringify(
-                                        toolInvocation.args,
-                                        null,
-                                        2
-                                      )}
-                                    </pre>
-                                  </div>
+                                    <div className="mb-3">
+                                      <h5 className="text-xs font-medium mb-1 text-muted-foreground">
+                                        Arguments:
+                                      </h5>
+                                      <pre className="bg-background/80 p-2 rounded-md text-xs overflow-auto">
+                                        {JSON.stringify(
+                                          toolInvocation.args,
+                                          null,
+                                          2
+                                        )}
+                                      </pre>
+                                    </div>
 
-                                  <div className="flex gap-2 justify-end">
-                                    <Button
-                                      variant="primary"
-                                      size="sm"
-                                      onClick={() =>
-                                        addToolResult({
-                                          toolCallId,
-                                          result: APPROVAL.NO,
-                                        })
-                                      }
-                                    >
-                                      Reject
-                                    </Button>
-                                    <Tooltip content={"Accept action"}>
+                                    <div className="flex gap-2 justify-end">
                                       <Button
                                         variant="primary"
                                         size="sm"
                                         onClick={() =>
                                           addToolResult({
                                             toolCallId,
-                                            result: APPROVAL.YES,
+                                            result: APPROVAL.NO,
                                           })
                                         }
                                       >
-                                        Approve
+                                        Reject
                                       </Button>
-                                    </Tooltip>
-                                  </div>
-                                </Card>
-                              );
+                                      <Tooltip content={"Accept action"}>
+                                        <Button
+                                          variant="primary"
+                                          size="sm"
+                                          onClick={() =>
+                                            addToolResult({
+                                              toolCallId,
+                                              result: APPROVAL.YES,
+                                            })
+                                          }
+                                        >
+                                          Approve
+                                        </Button>
+                                      </Tooltip>
+                                    </div>
+                                  </Card>
+                                );
+                              }
+                              return null; // Handle other tool states if needed
                             }
-                            return null;
-                          }
-                          return null;
-                        })}
-                      </div>
+                            return null; // Handle other part types if necessary
+                          })}
+                        </Card>
+                      )}
+
+                      {/* Timestamp */}
+                      <p
+                        className={`text-xs text-muted-foreground mt-1 ${isUser ? "text-right" : "text-left"
+                          } ${sources && sources.length > 0 ? "mb-1" : ""}`} // Add margin if sources exist
+                      >
+                        {formatTime(
+                          new Date(m.createdAt as unknown as string)
+                        )}
+                      </p>
+
+                      {/* <<< Start: Source Rendering from Annotations >>> */}
+                      {sources && sources.length > 0 && (
+                        <div
+                          className={`flex flex-wrap gap-2 mt-1 ${isUser ? "justify-end" : "justify-start"
+                            }`}
+                        >
+                          {sources.map((source, i) => (
+                            <a
+                              // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                              key={`source-${m.id}-${i}`}
+                              href={source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs bg-neutral-150 dark:bg-neutral-800 px-2 py-1 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center gap-1 text-neutral-600 dark:text-neutral-400"
+                            >
+                              <LinkSimple size={12} />
+                              <span>
+                                {source.title ||
+                                  new URL(source.url).hostname}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      {/* <<< End: Source Rendering from Annotations >>> */}
                     </div>
                   </div>
                 </div>
@@ -342,7 +397,7 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
+        {/* Input Area remains the same */}
         <form
           onSubmit={(e) =>
             handleAgentSubmit(e, {
