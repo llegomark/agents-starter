@@ -33,7 +33,7 @@ const toolsRequiringConfirmation: (keyof typeof tools)[] = [
 
 // Define a type for the source structure we expect in annotations
 type GoogleSource = {
-  sourceType: 'url';
+  sourceType: "url";
   id: string;
   url: string;
   title?: string;
@@ -115,7 +115,7 @@ export default function Chat() {
     <div className="h-[100vh] w-full p-4 flex justify-center items-center bg-fixed overflow-hidden">
       <div className="h-[calc(100vh-2rem)] w-full mx-auto max-w-lg flex flex-col shadow-xl rounded-md overflow-hidden relative border border-neutral-300 dark:border-neutral-800">
         {/* Header remains the same */}
-        <div className="px-4 py-3 border-b border-neutral-300 dark:border-neutral-800 flex items-center gap-3 sticky top-0 z-10">
+        <div className="px-4 py-3 border-b border-neutral-300 dark:border-neutral-800 flex items-center gap-3 sticky top-0 z-10 bg-white dark:bg-neutral-950"> {/* Added background for stickiness */}
           <div className="flex items-center justify-center h-8 w-8">
             <svg
               width="28px"
@@ -164,6 +164,7 @@ export default function Chat() {
           </Button>
         </div>
 
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 max-h-[calc(100vh-10rem)]">
           {agentMessages.length === 0 && (
@@ -203,15 +204,10 @@ export default function Chat() {
             const showAvatar =
               index === 0 || agentMessages[index - 1]?.role !== m.role;
 
-            // <<< Start: Annotation Source Extraction >>>
-            // Messages have an `annotations` property which is an array.
-            // We look through this array for an object that contains our `googleSources` key.
             const sourcesAnnotation = m.annotations?.find(
               (anno) => anno && typeof anno === 'object' && 'googleSources' in anno
             );
             const sources: GoogleSource[] | undefined = sourcesAnnotation ? (sourcesAnnotation as any).googleSources : undefined;
-            // <<< End: Annotation Source Extraction >>>
-
 
             return (
               <div key={m.id}>
@@ -228,16 +224,17 @@ export default function Chat() {
                     className={`flex gap-2 max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"
                       }`}
                   >
+                    {/* --- AVATAR FIX START --- */}
                     {showAvatar && !isUser ? (
-                      <Avatar username={"AI"} />
+                      <Avatar username={"AI"} className="flex-shrink-0" />
                     ) : (
-                      !isUser && <div className="w-8" /> // Alignment placeholder
+                      !isUser && <div className="w-8 flex-shrink-0" /> // Alignment placeholder + Added flex-shrink-0
                     )}
+                    {/* --- AVATAR FIX END --- */}
 
                     {/* Content and Timestamp Container */}
-                    <div className="flex flex-col">
+                    <div className="flex flex-col min-w-0"> {/* Added min-w-0 to allow content to shrink if needed, though avatar won't */}
                       {/* Main Content Bubble */}
-                      {/* Render only non-source parts here */}
                       {m.parts && m.parts.length > 0 && (
                         <Card
                           className={`p-3 rounded-md bg-neutral-100 dark:bg-neutral-900 ${isUser
@@ -356,14 +353,14 @@ export default function Chat() {
                       {/* Timestamp */}
                       <p
                         className={`text-xs text-muted-foreground mt-1 ${isUser ? "text-right" : "text-left"
-                          } ${sources && sources.length > 0 ? "mb-1" : ""}`} // Add margin if sources exist
+                          } ${sources && sources.length > 0 ? "mb-1" : ""}`} // Add margin bottom if sources exist
                       >
                         {formatTime(
                           new Date(m.createdAt as unknown as string)
                         )}
                       </p>
 
-                      {/* <<< Start: Source Rendering from Annotations >>> */}
+                      {/* Source Rendering from Annotations */}
                       {sources && sources.length > 0 && (
                         <div
                           className={`flex flex-wrap gap-2 mt-1 ${isUser ? "justify-end" : "justify-start"
@@ -387,7 +384,7 @@ export default function Chat() {
                           ))}
                         </div>
                       )}
-                      {/* <<< End: Source Rendering from Annotations >>> */}
+
                     </div>
                   </div>
                 </div>
@@ -408,7 +405,7 @@ export default function Chat() {
               },
             })
           }
-          className="p-3 bg-input-background absolute bottom-0 left-0 right-0 z-10 border-t border-neutral-300 dark:border-neutral-800"
+          className="p-3 bg-white dark:bg-neutral-950 absolute bottom-0 left-0 right-0 z-10 border-t border-neutral-300 dark:border-neutral-800" // Added background for stickiness
         >
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
