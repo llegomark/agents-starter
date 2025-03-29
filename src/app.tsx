@@ -185,13 +185,13 @@ export default function Chat() {
   return (
     <div className="h-[100vh] w-full p-4 flex justify-center items-center bg-fixed overflow-hidden">
       <div className="h-[calc(100vh-2rem)] w-full mx-auto max-w-lg flex flex-col shadow-xl rounded-md overflow-hidden relative border border-neutral-300 dark:border-neutral-800">
-        {/* Header remains the same */}
-        <div className="px-4 py-3 border-b border-neutral-300 dark:border-neutral-800 flex items-center gap-3 sticky top-0 z-10 bg-white dark:bg-neutral-950"> {/* Added background for stickiness */}
+        {/* Header with uniform button spacing */}
+        <div className="px-4 py-3 border-b border-neutral-300 dark:border-neutral-800 flex items-center gap-3 sticky top-0 z-10 bg-white dark:bg-neutral-950">
           <div className="flex items-center justify-center h-8 w-8">
             <svg
               width="28px"
               height="28px"
-              className="text-[#F48120]"
+              className="text-(--color-orange-500)"
               data-icon="agents"
             >
               <title>Cloudflare Agents</title>
@@ -207,53 +207,55 @@ export default function Chat() {
           <div className="flex-1">
             <h2 className="font-semibold text-base">AI Chat Agent</h2>
           </div>
-          <div className="flex items-center gap-2 mr-2">
-            <Bug size={16} />
-            <Toggle
-              toggled={showDebug}
-              aria-label="Toggle debug mode"
+          {/* Header controls with uniform spacing */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="md"
+              shape="square"
+              className="rounded-full h-9 w-9 flex items-center justify-center"
               onClick={() => setShowDebug((prev) => !prev)}
-            />
+            >
+              <Bug size={16} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              shape="square"
+              className="rounded-full h-9 w-9 flex items-center justify-center"
+              onClick={exportConversationToMarkdown}
+              disabled={agentMessages.length === 0}
+            >
+              <DownloadSimple size={20} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              shape="square"
+              className="rounded-full h-9 w-9 flex items-center justify-center"
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              shape="square"
+              className="rounded-full h-9 w-9 flex items-center justify-center"
+              onClick={clearHistory}
+            >
+              <Trash size={20} />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="md"
-            shape="square"
-            className="rounded-full h-9 w-9"
-            onClick={exportConversationToMarkdown}
-            disabled={agentMessages.length === 0}
-          >
-            <DownloadSimple size={20} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="md"
-            shape="square"
-            className="rounded-full h-9 w-9"
-            onClick={toggleTheme}
-          >
-            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="md"
-            shape="square"
-            className="rounded-full h-9 w-9"
-            onClick={clearHistory}
-          >
-            <Trash size={20} />
-          </Button>
         </div>
-
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 max-h-[calc(100vh-10rem)]">
           {agentMessages.length === 0 && (
-            // Welcome message remains the same
             <div className="h-full flex items-center justify-center">
               <Card className="p-6 max-w-md mx-auto bg-neutral-100 dark:bg-neutral-900">
                 <div className="text-center space-y-4">
-                  <div className="bg-[#F48120]/10 text-[#F48120] rounded-full p-3 inline-flex">
+                  <div className="bg-(--color-orange-500)/10 text-(--color-orange-500) rounded-full p-3 inline-flex">
                     <Robot size={24} />
                   </div>
                   <h3 className="font-semibold text-lg">Welcome to AI Chat</h3>
@@ -263,15 +265,15 @@ export default function Chat() {
                   </p>
                   <ul className="text-sm text-left space-y-2">
                     <li className="flex items-center gap-2">
-                      <span className="text-[#F48120]">•</span>
+                      <span className="text-(--color-orange-500)">•</span>
                       <span>Weather information for any city</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-[#F48120]">•</span>
+                      <span className="text-(--color-orange-500)">•</span>
                       <span>Local time in different locations</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-[#F48120]">•</span>
+                      <span className="text-(--color-orange-500)">•</span>
                       <span>Up-to-date info using Google Search</span>
                     </li>
                   </ul>
@@ -305,16 +307,15 @@ export default function Chat() {
                     className={`flex gap-2 max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"
                       }`}
                   >
-                    {/* --- AVATAR FIX START --- */}
+                    {/* Avatar */}
                     {showAvatar && !isUser ? (
                       <Avatar username={"AI"} className="flex-shrink-0" />
                     ) : (
-                      !isUser && <div className="w-8 flex-shrink-0" /> // Alignment placeholder + Added flex-shrink-0
+                      !isUser && <div className="w-8 flex-shrink-0" />
                     )}
-                    {/* --- AVATAR FIX END --- */}
 
                     {/* Content and Timestamp Container */}
-                    <div className="flex flex-col min-w-0"> {/* Added min-w-0 to allow content to shrink if needed, though avatar won't */}
+                    <div className="flex flex-col min-w-0">
                       {/* Main Content Bubble */}
                       {m.parts && m.parts.length > 0 && (
                         <Card
@@ -329,7 +330,6 @@ export default function Chat() {
 
                             if (part.type === "text") {
                               return (
-                                // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
                                 <div key={i}>
                                   {part.text.startsWith(
                                     "scheduled message"
@@ -352,7 +352,7 @@ export default function Chat() {
                             }
 
                             if (part.type === "tool-invocation") {
-                              // Tool invocation rendering logic remains the same
+                              // Tool invocation rendering logic
                               const toolInvocation = part.toolInvocation;
                               const toolCallId = toolInvocation.toolCallId;
 
@@ -364,15 +364,14 @@ export default function Chat() {
                               ) {
                                 return (
                                   <Card
-                                    // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
                                     key={i}
                                     className="p-4 my-3 rounded-md bg-neutral-100 dark:bg-neutral-900"
                                   >
                                     <div className="flex items-center gap-2 mb-3">
-                                      <div className="bg-[#F48120]/10 p-1.5 rounded-full">
+                                      <div className="bg-(--color-orange-500)/10 p-1.5 rounded-full">
                                         <Robot
                                           size={16}
-                                          className="text-[#F48120]"
+                                          className="text-(--color-orange-500)"
                                         />
                                       </div>
                                       <h4 className="font-medium">
@@ -434,7 +433,7 @@ export default function Chat() {
                       {/* Timestamp */}
                       <p
                         className={`text-xs text-muted-foreground mt-1 ${isUser ? "text-right" : "text-left"
-                          } ${sources && sources.length > 0 ? "mb-1" : ""}`} // Add margin bottom if sources exist
+                          } ${sources && sources.length > 0 ? "mb-1" : ""}`}
                       >
                         {formatTime(
                           new Date(m.createdAt as unknown as string)
@@ -449,7 +448,6 @@ export default function Chat() {
                         >
                           {sources.map((source, i) => (
                             <a
-                              // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
                               key={`source-${m.id}-${i}`}
                               href={source.url}
                               target="_blank"
@@ -465,7 +463,6 @@ export default function Chat() {
                           ))}
                         </div>
                       )}
-
                     </div>
                   </div>
                 </div>
@@ -475,7 +472,7 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area remains the same */}
+        {/* Input Area */}
         <form
           onSubmit={(e) =>
             handleAgentSubmit(e, {
@@ -486,7 +483,7 @@ export default function Chat() {
               },
             })
           }
-          className="p-3 bg-white dark:bg-neutral-950 absolute bottom-0 left-0 right-0 z-10 border-t border-neutral-300 dark:border-neutral-800" // Added background for stickiness
+          className="p-3 bg-white dark:bg-neutral-950 absolute bottom-0 left-0 right-0 z-10 border-t border-neutral-300 dark:border-neutral-800"
         >
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
@@ -513,7 +510,7 @@ export default function Chat() {
             <Button
               type="submit"
               shape="square"
-              className="rounded-full h-10 w-10 flex-shrink-0"
+              className="rounded-full h-10 w-10 flex-shrink-0 flex items-center justify-center"
               disabled={pendingToolCallConfirmation || !agentInput.trim()}
             >
               <PaperPlaneRight size={16} />
