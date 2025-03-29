@@ -252,7 +252,7 @@ export default function Chat() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 max-h-[calc(100vh-10rem)]">
           {agentMessages.length === 0 && (
-            <div className="h-full flex items-start justify-center pt-6 md:pt-8">
+            <div className="h-full flex items-start justify-center pt-2 md:pt-4">
               <Card className="p-6 max-w-md mx-auto bg-neutral-100 dark:bg-neutral-900 shadow-sm">
                 <div className="text-center space-y-4 pt-2">
                   <div className="bg-(--color-orange-500)/10 text-(--color-orange-500) rounded-full p-3 inline-flex mx-auto">
