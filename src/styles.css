@@ -393,3 +393,36 @@
 .markdown-content li > ol {
   @apply mt-1 mb-0;
 }
+
+/* Add these styles for Markdown tables within .prose */
+.prose table {
+  @apply w-full my-4 border-collapse border border-neutral-300 dark:border-neutral-700;
+}
+
+.prose thead {
+  @apply border-b border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800;
+}
+
+.prose th {
+  @apply px-4 py-2 text-left font-semibold text-neutral-800 dark:text-neutral-200;
+}
+
+.prose tbody tr {
+  @apply border-b border-neutral-200 dark:border-neutral-800;
+}
+
+.prose tbody tr:last-child {
+  @apply border-b-0;
+}
+
+.prose td {
+  @apply px-4 py-2 align-top text-neutral-700 dark:text-neutral-300;
+}
+
+/* Optional: Add alternating row colors */
+.prose tbody tr:nth-child(odd) {
+  @apply bg-white dark:bg-neutral-900;
+}
+.prose tbody tr:nth-child(even) {
+  @apply bg-neutral-50 dark:bg-neutral-850;
+}
