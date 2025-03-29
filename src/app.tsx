@@ -205,7 +205,7 @@ export default function Chat() {
             </svg>
           </div>
           <div className="flex-1">
-            <h2 className="font-semibold text-base">AI Chat Agent</h2>
+            <h2 className="font-semibold text-base">Chat</h2>
           </div>
           {/* Header controls with uniform spacing */}
           <div className="flex items-center gap-2">
@@ -252,31 +252,52 @@ export default function Chat() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 max-h-[calc(100vh-10rem)]">
           {agentMessages.length === 0 && (
-            <div className="h-full flex items-center justify-center">
-              <Card className="p-6 max-w-md mx-auto bg-neutral-100 dark:bg-neutral-900">
-                <div className="text-center space-y-4">
-                  <div className="bg-(--color-orange-500)/10 text-(--color-orange-500) rounded-full p-3 inline-flex">
-                    <Robot size={24} />
+            <div className="h-full flex items-start justify-center pt-6 md:pt-8">
+              <Card className="p-6 max-w-md mx-auto bg-neutral-100 dark:bg-neutral-900 shadow-sm">
+                <div className="text-center space-y-4 pt-2">
+                  <div className="bg-(--color-orange-500)/10 text-(--color-orange-500) rounded-full p-3 inline-flex mx-auto">
+                    <Robot size={24} weight="duotone" />
                   </div>
                   <h3 className="font-semibold text-lg">Welcome to AI Chat</h3>
                   <p className="text-muted-foreground text-sm">
-                    Start a conversation with your AI assistant. Try asking
-                    about:
+                    Start a conversation with your AI assistant. Try asking about:
                   </p>
-                  <ul className="text-sm text-left space-y-2">
-                    <li className="flex items-center gap-2">
-                      <span className="text-(--color-orange-500)">•</span>
-                      <span>Weather information for any city</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-(--color-orange-500)">•</span>
-                      <span>Local time in different locations</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-(--color-orange-500)">•</span>
-                      <span>Up-to-date info using Google Search</span>
-                    </li>
-                  </ul>
+
+                  <div className="grid grid-cols-1 gap-3 text-sm text-left">
+                    <div className="bg-white/50 dark:bg-neutral-800/50 p-3 rounded-lg hover:bg-white/80 dark:hover:bg-neutral-800/80 transition-colors">
+                      <div className="flex items-center gap-2 font-medium mb-1 text-(--color-orange-500)">
+                        <span className="bg-(--color-orange-500)/10 p-1 rounded">🔍</span>
+                        <span>Latest News & Information</span>
+                      </div>
+                      <p className="pl-7 text-xs text-muted-foreground">
+                        "What's the latest news about AI?" or "Tell me about recent scientific discoveries"
+                      </p>
+                    </div>
+
+                    <div className="bg-white/50 dark:bg-neutral-800/50 p-3 rounded-lg hover:bg-white/80 dark:hover:bg-neutral-800/80 transition-colors">
+                      <div className="flex items-center gap-2 font-medium mb-1 text-(--color-orange-500)">
+                        <span className="bg-(--color-orange-500)/10 p-1 rounded">🌦️</span>
+                        <span>Weather & Local Information</span>
+                      </div>
+                      <p className="pl-7 text-xs text-muted-foreground">
+                        "What's the weather like in Tokyo?" or "What time is it in London right now?"
+                      </p>
+                    </div>
+
+                    <div className="bg-white/50 dark:bg-neutral-800/50 p-3 rounded-lg hover:bg-white/80 dark:hover:bg-neutral-800/80 transition-colors">
+                      <div className="flex items-center gap-2 font-medium mb-1 text-(--color-orange-500)">
+                        <span className="bg-(--color-orange-500)/10 p-1 rounded">💡</span>
+                        <span>Helpful Explanations</span>
+                      </div>
+                      <p className="pl-7 text-xs text-muted-foreground">
+                        "Explain quantum computing" or "How do vaccines work?"
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground mt-4 italic">
+                    Type your message below to get started
+                  </p>
                 </div>
               </Card>
             </div>
