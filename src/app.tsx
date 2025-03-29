@@ -24,6 +24,7 @@ import {
   Robot,
   Sun,
   Trash,
+  DownloadSimple,
 } from "@phosphor-icons/react";
 
 // List of tools that require human confirmation
@@ -111,6 +112,76 @@ export default function Chat() {
     });
   };
 
+  const exportConversationToMarkdown = () => {
+    if (agentMessages.length === 0) {
+      // No messages to export
+      return;
+    }
+
+    // Format the conversation as markdown
+    let markdownContent = "# AI Chat Conversation\n\n";
+    markdownContent += `*Exported on ${new Date().toLocaleString()}*\n\n`;
+
+    agentMessages.forEach((message) => {
+      const role = message.role === "user" ? "👤 User" : "🤖 Assistant";
+      const timestamp = formatTime(new Date(message.createdAt as unknown as string));
+
+      markdownContent += `## ${role} (${timestamp})\n\n`;
+
+      if (message.parts && message.parts.length > 0) {
+        message.parts.forEach(part => {
+          if (part.type === "text") {
+            markdownContent += part.text + "\n\n";
+          } else if (part.type === "tool-invocation") {
+            const tool = part.toolInvocation;
+            markdownContent += `**Tool Call**: ${tool.toolName}\n`;
+            markdownContent += "```json\n";
+            markdownContent += JSON.stringify(tool.args, null, 2);
+            markdownContent += "\n```\n\n";
+
+            if (tool.state === "result") {
+              markdownContent += `**Result**:\n`;
+              markdownContent += "```\n";
+              markdownContent += typeof tool.result === 'object'
+                ? JSON.stringify(tool.result, null, 2)
+                : tool.result;
+              markdownContent += "\n```\n\n";
+            }
+          }
+        });
+      }
+
+      // Add source annotations if present
+      const sourcesAnnotation = message.annotations?.find(
+        (anno) => anno && typeof anno === 'object' && 'googleSources' in anno
+      );
+
+      const sources = sourcesAnnotation ? (sourcesAnnotation as any).googleSources : undefined;
+
+      if (sources && sources.length > 0) {
+        markdownContent += "**Sources:**\n\n";
+        sources.forEach((source: { url: string; title?: string }) => {
+          const title = source.title || new URL(source.url).hostname;
+          markdownContent += `- [${title}](${source.url})\n`;
+        });
+        markdownContent += "\n";
+      }
+
+      markdownContent += "---\n\n";
+    });
+
+    // Create and download the file
+    const blob = new Blob([markdownContent], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ai-chat-conversation-${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="h-[100vh] w-full p-4 flex justify-center items-center bg-fixed overflow-hidden">
       <div className="h-[calc(100vh-2rem)] w-full mx-auto max-w-lg flex flex-col shadow-xl rounded-md overflow-hidden relative border border-neutral-300 dark:border-neutral-800">
@@ -144,6 +215,16 @@ export default function Chat() {
               onClick={() => setShowDebug((prev) => !prev)}
             />
           </div>
+          <Button
+            variant="ghost"
+            size="md"
+            shape="square"
+            className="rounded-full h-9 w-9"
+            onClick={exportConversationToMarkdown}
+            disabled={agentMessages.length === 0}
+          >
+            <DownloadSimple size={20} />
+          </Button>
           <Button
             variant="ghost"
             size="md"
